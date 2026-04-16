@@ -57,7 +57,9 @@ interface SliderProps {
 }
 
 function Slider({ label, value, min, max, step, unit, decimals = 1, onChange, info }: SliderProps) {
-  const [open, setOpen] = useState(false);
+  const [tapped, setTapped] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const showInfo = info && (tapped || hovered);
   const pct = fillPct(value, min, max);
   return (
     <div style={{ marginBottom: '2px' }}>
@@ -67,12 +69,14 @@ function Slider({ label, value, min, max, step, unit, decimals = 1, onChange, in
           <span style={{ color: C.muted2, fontSize: '10px', marginLeft: '3px' }}>({unit})</span>
           {info && (
             <button
-              onClick={() => setOpen(o => !o)}
+              onClick={() => setTapped(o => !o)}
+              onMouseEnter={() => setHovered(true)}
+              onMouseLeave={() => setHovered(false)}
               style={{
-                background: open ? 'rgba(74,143,245,0.18)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${open ? 'rgba(74,143,245,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                background: showInfo ? 'rgba(74,143,245,0.18)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${showInfo ? 'rgba(74,143,245,0.4)' : 'rgba(255,255,255,0.1)'}`,
                 borderRadius: '50%', cursor: 'pointer',
-                color: open ? C.blue : C.muted2,
+                color: showInfo ? C.blue : C.muted2,
                 fontSize: '10px', width: '16px', height: '16px',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, lineHeight: 1, padding: 0,
@@ -90,7 +94,7 @@ function Slider({ label, value, min, max, step, unit, decimals = 1, onChange, in
         onChange={e => onChange(parseFloat(e.target.value))}
         style={{ background: `linear-gradient(to right, ${C.blue} ${pct}%, #1a2e4a ${pct}%)` }}
       />
-      {open && info && (
+      {showInfo && (
         <div style={{
           marginTop: '8px',
           background: 'rgba(74,143,245,0.06)',
