@@ -2,7 +2,7 @@
  * E-Methane Cost Calculator — Redesigned UI
  * Dark-theme, mobile-first, fully responsive.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ALMERIA_PRESET,
   CIUDAD_REAL_PRESET,
@@ -53,17 +53,33 @@ function fillPct(val: number, mn: number, mx: number) { return Math.max(0, Math.
 
 interface SliderProps {
   label: string; value: number; min: number; max: number; step: number;
-  unit: string; decimals?: number; onChange: (v: number) => void; tooltip?: string;
+  unit: string; decimals?: number; onChange: (v: number) => void; info?: string;
 }
 
-function Slider({ label, value, min, max, step, unit, decimals = 1, onChange, tooltip }: SliderProps) {
+function Slider({ label, value, min, max, step, unit, decimals = 1, onChange, info }: SliderProps) {
+  const [open, setOpen] = useState(false);
   const pct = fillPct(value, min, max);
   return (
     <div style={{ marginBottom: '2px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
-        <span title={tooltip} style={{ fontSize: '12px', color: C.muted, cursor: tooltip ? 'help' : undefined }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+        <span style={{ fontSize: '12px', color: C.muted, display: 'flex', alignItems: 'center', gap: '3px' }}>
           {label}
-          <span style={{ color: C.muted2, fontSize: '10px', marginLeft: '4px' }}>({unit})</span>
+          <span style={{ color: C.muted2, fontSize: '10px', marginLeft: '3px' }}>({unit})</span>
+          {info && (
+            <button
+              onClick={() => setOpen(o => !o)}
+              style={{
+                background: open ? 'rgba(74,143,245,0.18)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${open ? 'rgba(74,143,245,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: '50%', cursor: 'pointer',
+                color: open ? C.blue : C.muted2,
+                fontSize: '10px', width: '16px', height: '16px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, lineHeight: 1, padding: 0,
+                transition: 'all 0.15s',
+              }}
+            >?</button>
+          )}
         </span>
         <span style={{ fontSize: '14px', fontWeight: 600, color: C.text, fontVariantNumeric: 'tabular-nums', minWidth: '52px', textAlign: 'right' }}>
           {value.toFixed(decimals)}
@@ -74,6 +90,20 @@ function Slider({ label, value, min, max, step, unit, decimals = 1, onChange, to
         onChange={e => onChange(parseFloat(e.target.value))}
         style={{ background: `linear-gradient(to right, ${C.blue} ${pct}%, #1a2e4a ${pct}%)` }}
       />
+      {open && info && (
+        <div style={{
+          marginTop: '8px',
+          background: 'rgba(74,143,245,0.06)',
+          border: '1px solid rgba(74,143,245,0.18)',
+          borderRadius: '8px',
+          padding: '10px 12px',
+          fontSize: '11.5px',
+          color: '#8bb5e8',
+          lineHeight: 1.7,
+        }}>
+          {info}
+        </div>
+      )}
     </div>
   );
 }
@@ -352,33 +382,33 @@ export function EmethaneCalculator() {
 
           {/* Parameter sections */}
           <Section title="Solar & Electricity" icon="☀️">
-            <Slider label="Solar LCOE" unit="€/MWh" value={params.solarLcoe} min={15} max={45} step={0.5} onChange={v => set('solarLcoe', v)} tooltip="Levelised cost of electricity from the dedicated solar plant" />
-            <Slider label="Capacity factor" unit="%" value={params.solarCapacityFactor * 100} min={18} max={35} step={0.5} decimals={1} onChange={v => set('solarCapacityFactor', v / 100)} tooltip="Fraction of nameplate capacity actually delivered on average" />
-            <Slider label="Electrolyzer efficiency" unit="kWh/kg H₂" value={params.electrolyzerEfficiency} min={45} max={65} step={0.5} onChange={v => set('electrolyzerEfficiency', v)} tooltip="Electricity consumption per kilogram of hydrogen produced" />
+            <Slider label="Solar LCOE" unit="€/MWh" value={params.solarLcoe} min={15} max={45} step={0.5} onChange={v => set('solarLcoe', v)} info="How much the dedicated solar plant charges per MWh of electricity. Spain's sunny climate and cheap land make it one of the world's cheapest solar locations — €20–23/MWh with single-axis trackers. For comparison: UK offshore wind is ~€60–80/MWh, German solar ~€35/MWh. This is the single largest driver of hydrogen cost, so even small improvements here matter a lot." />
+            <Slider label="Capacity factor" unit="%" value={params.solarCapacityFactor * 100} min={18} max={35} step={0.5} decimals={1} onChange={v => set('solarCapacityFactor', v / 100)} info="The fraction of the year the solar plant operates at full output. At 25%, the plant generates power for ~2,190 hours/year (out of 8,760). Southern Spain with single-axis trackers (panels that rotate to follow the sun) achieves 27–30% — among the best in Europe. A higher capacity factor means the same electrolyzer produces more hydrogen per year, reducing cost per kg." />
+            <Slider label="Electrolyzer efficiency" unit="kWh/kg H₂" value={params.electrolyzerEfficiency} min={45} max={65} step={0.5} onChange={v => set('electrolyzerEfficiency', v)} info="How much electricity it takes to produce 1 kg of hydrogen by splitting water. The theoretical physics minimum is ~39 kWh/kg. State-of-the-art alkaline electrolyzers in 2024 achieve 50–52 kWh/kg; PEM systems are typically 55–60 kWh/kg. Lower is better — every 1 kWh/kg improvement saves ~€2/MWh of methane at Spanish electricity prices." />
           </Section>
 
           <Section title="Electrolyzer Capex & Financing" icon="⚡">
-            <Slider label="Electrolyzer TIC" unit="€/kW" value={params.electrolyzerTic} min={200} max={1800} step={10} decimals={0} onChange={v => set('electrolyzerTic', v)} tooltip="Total installed cost including balance of plant and EPC" />
-            <Slider label="Plant WACC" unit="%" value={params.plantWacc * 100} min={3} max={12} step={0.5} onChange={v => set('plantWacc', v / 100)} tooltip="Blended cost of capital for the overall project" />
-            <Slider label="Asset life" unit="years" value={params.assetLifeYears} min={15} max={30} step={1} decimals={0} onChange={v => set('assetLifeYears', v)} tooltip="Financial amortisation period" />
+            <Slider label="Electrolyzer TIC" unit="€/kW" value={params.electrolyzerTic} min={200} max={1800} step={10} decimals={0} onChange={v => set('electrolyzerTic', v)} info="Total Installed Cost — every euro to get the electrolyzer running: the cell stacks, power electronics, piping, civil works, and EPC contractor margin. Chinese alkaline electrolyzers: €250–350/kW (2030 delivery, default). EU-manufactured: €600–900/kW. Western premium brands today: €1,200+/kW. The default 340 €/kW is an aggressive but realistic 2030 target for Chinese alkaline supply chains (source: BloombergNEF 2024). A 450 MW plant at this cost = ~€153M capex." />
+            <Slider label="Plant WACC" unit="%" value={params.plantWacc * 100} min={3} max={12} step={0.5} onChange={v => set('plantWacc', v / 100)} info="Weighted Average Cost of Capital — the blended annual interest rate paid across all debt and equity financing the project. Think of it as 'how expensive is the money'. At 6%, every €100M of capex costs ~€8M/yr to service. EU-backed green hydrogen projects can achieve 4–5% (Innovation Fund grants + cheap EIB debt). Merchant projects without subsidies typically 8–10%. Lower WACC has an outsized impact because the electrolyzer capex is large." />
+            <Slider label="Asset life" unit="years" value={params.assetLifeYears} min={15} max={30} step={1} decimals={0} onChange={v => set('assetLifeYears', v)} info="How many years the model amortises capital costs over. Longer life = lower annual capital charge = lower cost per MWh. 20 years is the standard for industrial infrastructure. The electrolyzer stack itself may need replacement at ~80,000 hours (~9 years at 25% CF) — this is captured in the 2.5% O&M rate rather than a separate line item." />
           </Section>
 
           <Section title="Production Scale" icon="🏭" defaultOpen={false}>
-            <Slider label="CO₂ captured" unit="kt/yr" value={params.co2CapturedTpy / 1000} min={10} max={500} step={5} decimals={0} onChange={v => set('co2CapturedTpy', v * 1000)} tooltip="DAC plant capacity — drives all other volumes" />
-            <Slider label="H₂ per MWh CH₄" unit="kg/MWh" value={params.h2PerMwhCh4} min={30} max={42} step={0.5} onChange={v => set('h2PerMwhCh4', v)} tooltip="Hydrogen stoichiometry — theoretical 32, practical 36" />
-            <Slider label="CO₂ per MWh CH₄" unit="kg/MWh" value={params.co2PerMwhCh4} min={160} max={240} step={2} decimals={0} onChange={v => set('co2PerMwhCh4', v)} tooltip="CO₂ stoichiometry — theoretical 180, practical 200" />
+            <Slider label="CO₂ captured" unit="kt/yr" value={params.co2CapturedTpy / 1000} min={10} max={500} step={5} decimals={0} onChange={v => set('co2CapturedTpy', v * 1000)} info="Scale of the Direct Air Capture plant in thousands of tonnes of CO₂ per year. The default 100 kt/yr is a large commercial-scale plant — roughly 10× Climeworks' flagship Mammoth facility in Iceland (which captures ~36,000 t/yr). At 100 kt/yr CO₂ and 200 kg CO₂ per MWh CH₄, you produce ~500,000 MWh of methane/yr (≈ 45 MW average output). This parameter sets the scale of the entire plant." />
+            <Slider label="H₂ per MWh CH₄" unit="kg/MWh" value={params.h2PerMwhCh4} min={30} max={42} step={0.5} onChange={v => set('h2PerMwhCh4', v)} info="Hydrogen consumed per MWh of methane produced — set by the Sabatier reaction (CO₂ + 4H₂ → CH₄ + 2H₂O). The theoretical minimum is ~32 kg H₂/MWh CH₄ at 100% conversion. In practice, methanation reactors run at ~80% single-pass conversion with recycling losses, giving ~36 kg/MWh (default). Higher values = more electricity and electrolyzer capacity needed. This number is largely fixed by chemistry and hard to change without fundamentally different reactor designs." />
+            <Slider label="CO₂ per MWh CH₄" unit="kg/MWh" value={params.co2PerMwhCh4} min={160} max={240} step={2} decimals={0} onChange={v => set('co2PerMwhCh4', v)} info="CO₂ consumed per MWh of methane produced. Theoretical minimum ~180 kg/MWh at perfect conversion. Practical value ~200 kg/MWh (default) accounting for reactor inefficiency and gas separation losses. For context: burning 1 MWh of fossil natural gas releases ~200 kg CO₂ — so e-methane is roughly carbon-neutral when the CO₂ feedstock is captured from the atmosphere." />
           </Section>
 
           <Section title="DAC Cost" icon="🌬️" defaultOpen={false}>
-            <Slider label="DAC cost" unit="€/t CO₂" value={params.dacCostPerTonne} min={50} max={700} step={5} decimals={0} onChange={v => set('dacCostPerTonne', v)} tooltip="All-in levelised cost per tonne CO₂ captured — bundles capex, opex, financing" />
+            <Slider label="DAC cost" unit="€/t CO₂" value={params.dacCostPerTonne} min={50} max={700} step={5} decimals={0} onChange={v => set('dacCostPerTonne', v)} info="The all-in cost to capture one tonne of CO₂ directly from the atmosphere, including DAC capex, electricity, maintenance, and financing. Current commercial cost (Climeworks, Carbon Engineering): €400–800/t. The default €278/t reflects a 100 kt/yr Brineworks SOAK plant with EU Innovation Fund grant support — achievable by ~2028–30. This is typically the second-largest cost component after hydrogen. Note: DAC needs both electricity and heat; in this model those costs are bundled into the single €/t figure." />
           </Section>
 
           <Section title="Water, Land & Pipeline" icon="🌊" defaultOpen={false}>
-            <Slider label="Water per tonne CO₂" unit="m³/t" value={params.waterM3PerTonneCo2} min={2} max={20} step={0.5} onChange={v => set('waterM3PerTonneCo2', v)} />
-            <Slider label="Desal energy" unit="kWh/m³" value={params.desalKwhPerM3} min={0.8} max={5} step={0.1} onChange={v => set('desalKwhPerM3', v)} tooltip="Brackish RO: 1.5. Seawater RO: 3.3." />
-            <Slider label="Land lease" unit="€/ha/yr" value={params.landLeaseEurPerHa} min={500} max={4000} step={50} decimals={0} onChange={v => set('landLeaseEurPerHa', v)} />
-            <Slider label="Solar land density" unit="ha/MW" value={params.solarHaPerMw} min={0.3} max={0.8} step={0.01} onChange={v => set('solarHaPerMw', v)} />
-            <Slider label="Pipeline spur capex" unit="€M" value={params.pipelineSpurCapexEurM} min={0} max={50} step={1} decimals={0} onChange={v => set('pipelineSpurCapexEurM', v)} tooltip="Set 0 if site is already on existing gas trunk" />
+            <Slider label="Water per tonne CO₂" unit="m³/t" value={params.waterM3PerTonneCo2} min={2} max={20} step={0.5} onChange={v => set('waterM3PerTonneCo2', v)} info="Total water consumed per tonne of CO₂ processed, covering both the DAC unit (humidified air contactors need makeup water) and electrolysis (splitting water is literally the process). Electrolysis dominates: ~9 kg H₂O per kg H₂, or ~324 t H₂O per tonne H₂. At 100 kt/yr CO₂ scale, the plant needs roughly 500,000–900,000 m³/yr of water — equivalent to a small town's annual supply. In arid Spain, this water must be desalinated." />
+            <Slider label="Desal energy" unit="kWh/m³" value={params.desalKwhPerM3} min={0.8} max={5} step={0.1} onChange={v => set('desalKwhPerM3', v)} info="Electricity needed to produce 1 m³ of clean water by reverse osmosis (RO). The default 1.5 kWh/m³ assumes brackish groundwater — slightly salty well water common in Spain's dry interior (Ciudad Real sits on a semi-arid plateau). Coastal sites using seawater need 3.0–4.5 kWh/m³ because seawater is ~35g salt/L vs brackish ~3–10g/L, requiring much higher pressure. Almería preset uses 3.3 kWh/m³ for seawater. Despite sounding large, desalination is a minor cost: even at 3.3 kWh/m³ it adds only ~€1–2/MWh CH₄." />
+            <Slider label="Land lease" unit="€/ha/yr" value={params.landLeaseEurPerHa} min={500} max={4000} step={50} decimals={0} onChange={v => set('landLeaseEurPerHa', v)} info="Annual rent for the solar farm land. In Spain, agricultural land repurposed for solar leases for €1,000–2,500/ha/yr — dry scrubland and non-irrigable plots at the lower end, prime agricultural land at the upper end. A 450 MW solar plant needs ~225 ha (2.25 km²). Even at €2,500/ha/yr, land costs only ~€560k/yr — less than 1% of total annual costs. Land is not a significant cost driver for this model." />
+            <Slider label="Solar land density" unit="ha/MW" value={params.solarHaPerMw} min={0.3} max={0.8} step={0.01} onChange={v => set('solarHaPerMw', v)} info="How much land a solar plant uses per MW of installed capacity. Fixed-tilt panels: 0.3–0.4 ha/MW (more panels per hectare but they shade each other). Single-axis trackers (default 0.5 ha/MW): panels rotate east-to-west through the day, generating 15–25% more electricity but needing more space between rows to avoid shading. Bifacial panels on trackers: ~0.45–0.55 ha/MW. The extra land needed for trackers is easily justified by the capacity factor improvement." />
+            <Slider label="Pipeline spur capex" unit="€M" value={params.pipelineSpurCapexEurM} min={0} max={50} step={1} decimals={0} onChange={v => set('pipelineSpurCapexEurM', v)} info="One-time capital cost to build a pipeline connecting the plant to the high-pressure natural gas grid. Set to €0 if the site already sits on an existing trunk line (some industrial zones in Spain do). A 10–20 km pipeline spur typically costs €15–30M. Even at €30M, amortised over 20 years at 6% WACC, it adds only ~€2.5M/yr — about €3–5/MWh CH₄. Pipeline is rarely a deciding factor in site selection compared to solar resource and electricity cost." />
           </Section>
         </div>
 
